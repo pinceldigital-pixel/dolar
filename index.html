@@ -140,7 +140,6 @@
                     const iconSvg = rateIcons[rate.nombre] || `<p class="font-bold text-lg">$</p>`;
 
                     const card = `
-                        <div class="rate-card" data-nombre="${rate.nombre}">
                         <div class="flex items-center justify-between p-3 bg-white/50 rounded-xl hover:bg-white/80 dark:bg-gray-800/50 dark:hover:bg-gray-800/80 transition-all duration-300">
                             <div class="flex items-center gap-4">
                                 <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center dark:bg-green-600">
@@ -155,13 +154,8 @@
                                 <p class="font-bold text-lg text-gray-900 dark:text-white">${formatCurrency(price)}</p>
                             </div>
                         </div>
-                        </div>
                     `;
                     ratesContainer.insertAdjacentHTML('beforeend', card);
-                    
-                    // Attach click to show history
-                    const lastCard = ratesContainer.lastElementChild.querySelector('.rate-card');
-                    lastCard.addEventListener('click', () => showHistory(rate.nombre));
                 });
             };
 
@@ -219,121 +213,6 @@
             });
         }
     </script>
-            // ======= Histórico mensual (pro, sin romper nada) =======
-            const casaSlug = {
-              'Oficial': 'oficial',
-              'Blue': 'blue',
-              'Bolsa': 'bolsa',
-              'Contado con liquidación': 'contadoconliqui'
-            };
-            
-            const getLastNDates = (n) => {
-              const out = [];
-              const tzOffset = new Date().getTimezoneOffset() * 60000;
-              for (let i = n - 1; i >= 0; i--) {
-                const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000 - tzOffset);
-                const yyyy = d.getUTCFullYear();
-                const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-                const dd = String(d.getUTCDate()).padStart(2, '0');
-                out.push(`${yyyy}/${mm}/${dd}`);
-              }
-              return out;
-            };
-
-            async function fetchMonthlyHistory(nombre) {
-              const slug = casaSlug[nombre];
-              if (!slug) return [];
-              const dates = getLastNDates(30);
-              const urls = dates.map(dt => `https://api.argentinadatos.com/v1/cotizaciones/dolares/${slug}/${dt}`);
-              const results = await Promise.allSettled(urls.map(u => fetch(u).then(r => r.ok ? r.json() : null)));
-              // results[i] may be {status, value}
-              const series = [];
-              for (let i = 0; i < results.length; i++) {
-                const r = results[i];
-                if (r.status === 'fulfilled' && r.value && r.value.venta) {
-                  const dateLabel = dates[i].replaceAll('/', '-');
-                  series.push({ fecha: dateLabel, valor: r.value.venta });
-                }
-              }
-              return series;
-            }
-
-            let historyChart = null;
-            function openModal() {
-              const modal = document.getElementById('history-modal');
-              modal.classList.remove('hidden');
-              modal.classList.add('flex');
-            }
-            function closeModal() {
-              const modal = document.getElementById('history-modal');
-              modal.classList.add('hidden');
-              modal.classList.remove('flex');
-              // cleanup
-              const ctx = document.getElementById('history-chart');
-              if (historyChart) {
-                historyChart.destroy();
-                historyChart = null;
-              }
-              ctx.classList.add('hidden');
-              document.getElementById('modal-error').classList.add('hidden');
-              document.getElementById('modal-loader').style.display = 'flex';
-            }
-
-            async function showHistory(nombre) {
-              document.getElementById('modal-title').textContent = `Histórico mensual — ${friendlyNames[nombre] || nombre}`;
-              openModal();
-              const loader = document.getElementById('modal-loader');
-              const canvas = document.getElementById('history-chart');
-              const errorEl = document.getElementById('modal-error');
-              try {
-                const data = await fetchMonthlyHistory(nombre);
-                if (!data || data.length === 0) {
-                  errorEl.textContent = 'Histórico no disponible para esta cotización.';
-                  errorEl.classList.remove('hidden');
-                  return;
-                }
-                const labels = data.map(d => d.fecha.slice(5)); // MM-DD
-                const values = data.map(d => d.valor);
-                const ctx = canvas.getContext('2d');
-                canvas.classList.remove('hidden');
-                historyChart = new Chart(ctx, {
-                  type: 'line',
-                  data: {
-                    labels,
-                    datasets: [{
-                      label: 'Venta (ARS)',
-                      data: values,
-                      tension: 0.3,
-                      borderWidth: 2,
-                      pointRadius: 2
-                    }]
-                  },
-                  options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { display: false },
-                      tooltip: { mode: 'index', intersect: false }
-                    },
-                    scales: {
-                      x: { grid: { display: false } },
-                      y: { grid: { color: 'rgba(0,0,0,0.08)' } }
-                    }
-                  }
-                });
-              } catch (e) {
-                errorEl.textContent = 'Error al cargar el histórico.';
-                errorEl.classList.remove('hidden');
-              } finally {
-                loader.style.display = 'none';
-              }
-            }
-
-            // Cerrar modal
-            document.addEventListener('click', (e) => {
-              if (e.target.id === 'modal-backdrop' || e.target.id === 'modal-close') closeModal();
-            });
-    
 
     <!-- Modal Histórico -->
     <div id="history-modal" class="fixed inset-0 hidden items-center justify-center z-50">
@@ -343,13 +222,159 @@
           <h2 id="modal-title" class="text-xl font-semibold text-gray-800 dark:text-gray-100">Histórico</h2>
           <button id="modal-close" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
         </div>
-        <div id="modal-body" class="space-y-4">
+        <div class="space-y-4">
           <div id="modal-loader" class="flex justify-center py-6"><div class="loader"></div></div>
-          <canvas id="history-chart" height="220" class="hidden"></canvas>
+          <div class="h-60"><canvas id="history-chart" class="hidden"></canvas></div>
           <p id="modal-error" class="hidden text-sm text-gray-500 dark:text-gray-400 text-center">No se pudo cargar el histórico.</p>
         </div>
       </div>
     </div>
-    
+
+
+<script>
+// ====== Histórico mensual (seguro, sin tocar tu lógica actual) ======
+(function(){
+  const friendlyNames = {
+    'Oficial': 'Dólar Oficial', 'Blue': 'Dólar Blue', 'Bolsa': 'Dólar MEP', 'Contado con liquidación': 'Dólar CCL'
+  };
+  const reverseMap = Object.fromEntries(Object.entries(friendlyNames).map(([k,v]) => [v, k]));
+
+  const casaSlug = {
+    'Oficial': 'oficial',
+    'Blue': 'blue',
+    'Bolsa': 'bolsa',
+    'Contado con liquidación': 'contadoconliqui'
+  };
+
+  const getLastNDates = (n) => {
+    const out = [];
+    const tzOffset = new Date().getTimezoneOffset() * 60000;
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000 - tzOffset);
+      const yyyy = d.getUTCFullYear();
+      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(d.getUTCDate()).padStart(2, '0');
+      out.push(`${yyyy}/${mm}/${dd}`);
+    }
+    return out;
+  };
+
+  async function fetchMonthlyHistory(nombre) {
+    const slug = casaSlug[nombre];
+    if (!slug) return [];
+    const dates = getLastNDates(30);
+    const urls = dates.map(dt => `https://api.argentinadatos.com/v1/cotizaciones/dolares/${slug}/${dt}`);
+    const results = await Promise.allSettled(urls.map(u => fetch(u).then(r => r.ok ? r.json() : null)));
+    const series = [];
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (r && r.status === 'fulfilled' && r.value && (r.value.venta || r.value.compra)) {
+        const dateLabel = dates[i].replaceAll('/', '-'); // YYYY-MM-DD
+        // usamos venta si está, si no compra
+        const valor = r.value.venta ?? r.value.compra;
+        series.push({ fecha: dateLabel, valor });
+      }
+    }
+    return series;
+  }
+
+  let historyChart = null;
+  function openModal() {
+    const modal = document.getElementById('history-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+  function closeModal() {
+    const modal = document.getElementById('history-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    if (historyChart) { historyChart.destroy(); historyChart = null; }
+    document.getElementById('history-chart').classList.add('hidden');
+    document.getElementById('modal-error').classList.add('hidden');
+    document.getElementById('modal-loader').style.display = 'flex';
+  }
+
+  async function showHistory(nombre) {
+    document.getElementById('modal-title').textContent = `Histórico mensual — ${friendlyNames[nombre] || nombre}`;
+    openModal();
+    const loader = document.getElementById('modal-loader');
+    const canvas = document.getElementById('history-chart');
+    const errorEl = document.getElementById('modal-error');
+    try {
+      const data = await fetchMonthlyHistory(nombre);
+      if (!data || data.length === 0) {
+        errorEl.textContent = 'Histórico no disponible para esta cotización.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      const labels = data.map(d => d.fecha.slice(5)); // MM-DD
+      const values = data.map(d => d.valor);
+      const ctx = canvas.getContext('2d');
+      canvas.classList.remove('hidden');
+      historyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'ARS',
+            data: values,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { mode: 'index', intersect: false }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: 'rgba(0,0,0,0.08)' } }
+          }
+        }
+      });
+    } catch (e) {
+      errorEl.textContent = 'Error al cargar el histórico.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      loader.style.display = 'none';
+    }
+  }
+
+  // Cerrar modal
+  document.addEventListener('click', (e) => {
+    if (e.target && (e.target.id === 'modal-backdrop' || e.target.id === 'modal-close')) {
+      closeModal();
+    }
+  });
+
+  // Delegación de eventos: clic en cualquier tarjeta de cotización
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('rates-container');
+    if (!container) return;
+    container.addEventListener('click', (e) => {
+      // Buscar el card cercano
+      let el = e.target;
+      while (el && el !== container) {
+        // el título está en un <p class="font-semibold ..."> con el nombre "Dólar X"
+        if (el.classList && el.classList.contains('flex') && el.classList.contains('items-center') && el.classList.contains('justify-between')) {
+          const titleEl = el.querySelector('p.font-semibold');
+          if (titleEl) {
+            const displayed = titleEl.textContent.trim(); // "Dólar Oficial" etc.
+            const nombre = reverseMap[displayed];
+            if (nombre) showHistory(nombre);
+          }
+          break;
+        }
+        el = el.parentElement;
+      }
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
