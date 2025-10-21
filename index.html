@@ -8,6 +8,9 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +20,7 @@
     <link rel="manifest" href="manifest.json">
     
     <!-- Theme Color -->
-    <meta name="theme-color" content="#000000"> <!-- Dark theme color -->
+    <meta name="theme-color" content="#111827"> <!-- Dark theme color -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -29,36 +32,40 @@
         .loader {
             width: 48px;
             height: 48px;
-            border: 5px solid #4A5568; /* dark:border-gray-600 */
-            border-bottom-color: #6D28D9;
+            border: 5px solid #A0AEC0; /* border-gray-400 */
+            border-bottom-color: #9F7AEA; /* border-violet-400 */
             border-radius: 50%;
             display: inline-block;
             box-sizing: border-box;
             animation: rotation 1s linear infinite;
         }
-        html.dark .loader {
-             border: 5px solid #A0AEC0; /* dark:border-gray-400 */
-             border-bottom-color: #9F7AEA; /* dark:border-violet-400 */
-        }
         @keyframes rotation {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* Ocultar scrollbars en el chart container si es necesario */
+        #chart-container::-webkit-scrollbar {
+            display: none;
+        }
+        #chart-container {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
     </style>
 </head>
-<body class="bg-gray-200 dark:bg-gray-900 transition-colors duration-500 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-900 transition-colors duration-500 min-h-screen flex items-center justify-center p-4">
 
-    <div class="w-full max-w-sm mx-auto bg-white/70 backdrop-blur-xl rounded-3xl shadow-lg p-6 space-y-6 dark:bg-black/30">
+    <div class="w-full max-w-sm mx-auto bg-black/30 backdrop-blur-xl rounded-3xl shadow-lg p-6 space-y-6">
         <!-- Header -->
         <header class="flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Dólar AR</h1>
-            <div id="last-update" class="text-xs text-gray-500 dark:text-gray-400 text-right"></div>
+            <h1 class="text-2xl font-bold text-gray-100">Dólar AR</h1>
+            <div id="last-update" class="text-xs text-gray-400 text-right"></div>
         </header>
 
         <!-- Toggle Compra/Venta -->
-        <div class="bg-gray-200/80 p-1 rounded-full grid grid-cols-2 gap-1 dark:bg-gray-800/80">
-            <button id="btn-compra" class="text-gray-600 dark:text-gray-300 py-2 rounded-full transition-all duration-300">Compra</button>
-            <button id="btn-venta" class="bg-white text-violet-700 font-semibold shadow-md py-2 rounded-full transition-all duration-300 dark:bg-gray-700 dark:text-violet-300">Venta</button>
+        <div class="bg-gray-800/80 p-1 rounded-full grid grid-cols-2 gap-1">
+            <button id="btn-compra" class="text-gray-300 py-2 rounded-full transition-all duration-300">Compra</button>
+            <button id="btn-venta" class="bg-gray-700 text-violet-300 font-semibold shadow-md py-2 rounded-full transition-all duration-300">Venta</button>
         </div>
 
         <!-- Lista de Cotizaciones -->
@@ -73,16 +80,32 @@
         <!-- Footer -->
         <footer class="text-center space-y-4 pt-2">
             <div class="flex justify-center items-center gap-8">
-                 <button id="refresh-btn" class="text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400 transition">
+                 <button id="refresh-btn" class="text-gray-400 hover:text-violet-400 transition">
                     <!-- Icono de actualizar SVG proporcionado -->
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="24" height="24" viewBox="0 0 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 4V1L8 5L12 9V6C15.31 6 18 8.69 18 12C18 13.06 17.71 14.07 17.18 14.99L18.66 16.47C19.53 15.11 20 13.62 20 12C20 7.58 16.42 4 12 4ZM12 18C8.69 18 6 15.31 6 12C6 10.94 6.29 9.93 6.82 9.01L5.34 7.53C4.47 8.89 4 10.38 4 12C4 16.42 7.58 20 12 20V23L16 19L12 15V18Z"/>
                     </svg>
                 </button>
             </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Hecho por Daniel</p>
+            <p class="text-xs text-gray-400">Hecho por Daniel</p>
         </footer>
     </div>
+
+    <!-- Modal del Historial -->
+    <div id="history-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="w-full max-w-lg bg-gray-800 rounded-2xl shadow-lg p-6 relative">
+            <button id="close-modal-btn" class="absolute top-3 right-4 text-2xl font-bold text-gray-400 hover:text-white">&times;</button>
+            <h2 id="modal-title" class="text-xl font-bold text-white mb-4">Historial del Dólar</h2>
+            <div id="chart-container" class="relative h-64">
+                <!-- Loader for chart -->
+                <div id="chart-loader" class="absolute inset-0 flex items-center justify-center bg-gray-800/80 rounded-lg">
+                    <div class="loader"></div>
+                </div>
+                <canvas id="history-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -92,13 +115,15 @@
             const btnCompra = document.getElementById('btn-compra');
             const btnVenta = document.getElementById('btn-venta');
             const refreshBtn = document.getElementById('refresh-btn');
-            const themeMetaTag = document.querySelector('meta[name="theme-color"]');
-
-            // Siempre establecemos el tema oscuro por defecto
-            document.documentElement.classList.add('dark');
-            themeMetaTag.setAttribute('content', '#000000');
-
-
+            
+            // Modal elements
+            const historyModal = document.getElementById('history-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const modalTitle = document.getElementById('modal-title');
+            const chartLoader = document.getElementById('chart-loader');
+            const historyChartCtx = document.getElementById('history-chart').getContext('2d');
+            let chartInstance = null;
+            
             let currentView = 'venta';
             let ratesData = [];
             
@@ -106,6 +131,7 @@
                 'Oficial': 'Dólar Oficial', 'Blue': 'Dólar Blue', 'Bolsa': 'Dólar MEP', 'Cripto': 'Dólar Crypto'
             };
             const displayOrder = ['Oficial', 'Blue', 'Bolsa', 'Cripto'];
+            const apiTypeMapping = { 'Blue': 'informal', 'Oficial': 'oficial', 'Bolsa': 'mep' };
 
             const rateIcons = {
                 'Oficial': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h6m-6 4h6m-6 4h6" /></svg>`,
@@ -129,7 +155,7 @@
                 const sortedData = ratesData.filter(rate => friendlyNames[rate.nombre]).sort((a, b) => displayOrder.indexOf(a.nombre) - displayOrder.indexOf(b.nombre));
                 
                 if (sortedData.length === 0 && !loader.classList.contains('hidden')) {
-                     ratesContainer.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400 py-8">No se pudieron cargar las cotizaciones. Intenta de nuevo.</p>`;
+                     ratesContainer.innerHTML = `<p class="text-center text-gray-400 py-8">No se pudieron cargar las cotizaciones. Intenta de nuevo.</p>`;
                      return;
                 }
 
@@ -139,22 +165,30 @@
                     const iconSvg = rateIcons[rate.nombre] || `<p class="font-bold text-lg">$</p>`;
 
                     const card = `
-                        <div class="flex items-center justify-between p-3 bg-white/50 rounded-xl hover:bg-white/80 dark:bg-gray-800/50 dark:hover:bg-gray-800/80 transition-all duration-300">
+                        <div class="rate-card flex items-center justify-between p-3 bg-gray-800/50 rounded-xl hover:bg-gray-800/80 transition-all duration-300 cursor-pointer" data-type="${rate.nombre}">
                             <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center dark:bg-green-600">
+                                <div class="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center">
                                     ${iconSvg}
                                 </div>
                                 <div>
-                                    <p class="font-semibold text-gray-800 dark:text-gray-100">${friendlyNames[rate.nombre]}</p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">${currentView === 'compra' ? 'Venta' : 'Compra'}: ${formatCurrency(secondaryPrice)}</p>
+                                    <p class="font-semibold text-gray-100">${friendlyNames[rate.nombre]}</p>
+                                    <p class="text-xs text-gray-400">${currentView === 'compra' ? 'Venta' : 'Compra'}: ${formatCurrency(secondaryPrice)}</p>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <p class="font-bold text-lg text-gray-900 dark:text-white">${formatCurrency(price)}</p>
+                                <p class="font-bold text-lg text-white">${formatCurrency(price)}</p>
                             </div>
                         </div>
                     `;
                     ratesContainer.insertAdjacentHTML('beforeend', card);
+                });
+
+                // Add event listeners to new cards
+                document.querySelectorAll('.rate-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const type = card.dataset.type;
+                        showHistory(type);
+                    });
                 });
             };
 
@@ -176,30 +210,125 @@
                     renderRates();
                 } catch (error) {
                     console.error('Error fetching data:', error);
-                    ratesContainer.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400 py-8">No se pudieron cargar las cotizaciones. Intenta refrescar.</p>`;
+                    ratesContainer.innerHTML = `<p class="text-center text-gray-400 py-8">No se pudieron cargar las cotizaciones. Intenta refrescar.</p>`;
                     lastUpdateEl.textContent = 'Error al cargar';
                 } finally {
                     loader.style.display = 'none';
                 }
             };
+
+            const showHistory = async (dollarType) => {
+                modalTitle.textContent = `Historial ${friendlyNames[dollarType]}`;
+                historyModal.classList.remove('hidden');
+                chartLoader.style.display = 'flex';
+                if (chartInstance) {
+                    chartInstance.destroy();
+                }
+
+                const apiType = apiTypeMapping[dollarType];
+                if (!apiType) {
+                    chartLoader.innerHTML = `<p class="text-gray-400 text-center">El historial para ${friendlyNames[dollarType]} no está disponible.</p>`;
+                    return;
+                }
+                
+                chartLoader.innerHTML = `<div class="loader"></div>`; // Reset loader
+
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - 30);
+
+                const formatDate = (date) => {
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+                    return `${day}-${month}-${year}`;
+                }
+
+                const url = `https://mercados.ambito.com/dolar/${apiType}/historico-general/${formatDate(startDate)}/${formatDate(endDate)}`;
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to fetch historical data');
+                    const result = await response.json();
+                    
+                    // The first item is a header, so we slice it
+                    const data = result.slice(1);
+                    const labels = data.map(item => item[0]);
+                    const values = data.map(item => parseFloat(item[1].replace(',', '.')));
+                    
+                    chartInstance = new Chart(historyChartCtx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Valor de Venta',
+                                data: values,
+                                borderColor: '#9F7AEA', // violet-400
+                                backgroundColor: 'rgba(159, 122, 234, 0.2)',
+                                borderWidth: 2,
+                                tension: 0.1,
+                                pointBackgroundColor: '#9F7AEA',
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                             plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    backgroundColor: '#1F2937', // gray-800
+                                    titleColor: '#F9FAFB', // gray-50
+                                    bodyColor: '#D1D5DB', // gray-300
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    ticks: { color: '#9CA3AF' }, // gray-400
+                                    grid: { color: 'rgba(156, 163, 175, 0.1)' }
+                                },
+                                x: {
+                                    ticks: { color: '#9CA3AF' }, // gray-400
+                                    grid: { display: false }
+                                }
+                            }
+                        }
+                    });
+
+                } catch (error) {
+                    console.error('Error fetching history:', error);
+                    chartLoader.innerHTML = `<p class="text-gray-400 text-center">No se pudo cargar el historial.</p>`;
+                } finally {
+                     chartLoader.style.display = 'none';
+                }
+            };
             
             const setActiveButton = (button) => {
                  if (button === 'compra') {
-                    btnCompra.classList.add('bg-white', 'text-violet-700', 'font-semibold', 'shadow-md', 'dark:bg-gray-700', 'dark:text-violet-300');
-                    btnCompra.classList.remove('text-gray-600', 'dark:text-gray-300');
-                    btnVenta.classList.remove('bg-white', 'text-violet-700', 'font-semibold', 'shadow-md', 'dark:bg-gray-700', 'dark:text-violet-300');
-                    btnVenta.classList.add('text-gray-600', 'dark:text-gray-300');
+                    btnCompra.classList.add('bg-gray-700', 'text-violet-300', 'font-semibold', 'shadow-md');
+                    btnCompra.classList.remove('text-gray-300');
+                    btnVenta.classList.remove('bg-gray-700', 'text-violet-300', 'font-semibold', 'shadow-md');
+                    btnVenta.classList.add('text-gray-300');
                 } else {
-                    btnVenta.classList.add('bg-white', 'text-violet-700', 'font-semibold', 'shadow-md', 'dark:bg-gray-700', 'dark:text-violet-300');
-                    btnVenta.classList.remove('text-gray-600', 'dark:text-gray-300');
-                    btnCompra.classList.remove('bg-white', 'text-violet-700', 'font-semibold', 'shadow-md', 'dark:bg-gray-700', 'dark:text-violet-300');
-                    btnCompra.classList.add('text-gray-600', 'dark:text-gray-300');
+                    btnVenta.classList.add('bg-gray-700', 'text-violet-300', 'font-semibold', 'shadow-md');
+                    btnVenta.classList.remove('text-gray-300');
+                    btnCompra.classList.remove('bg-gray-700', 'text-violet-300', 'font-semibold', 'shadow-md');
+                    btnCompra.classList.add('text-gray-300');
                 }
             }
 
             btnCompra.addEventListener('click', () => { currentView = 'compra'; setActiveButton('compra'); renderRates(); });
             btnVenta.addEventListener('click', () => { currentView = 'venta'; setActiveButton('venta'); renderRates(); });
             refreshBtn.addEventListener('click', fetchData);
+            
+            closeModalBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
+            historyModal.addEventListener('click', (e) => {
+                if(e.target === historyModal) {
+                    historyModal.classList.add('hidden');
+                }
+            });
+
 
             fetchData();
         });
@@ -214,3 +343,4 @@
     </script>
 </body>
 </html>
+
