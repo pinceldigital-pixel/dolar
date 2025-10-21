@@ -165,9 +165,9 @@
                     const iconSvg = rateIcons[rate.nombre] || `<p class="font-bold text-lg">$</p>`;
 
                     const card = `
-                        <div class="rate-card flex items-center justify-between p-3 bg-gray-800/50 rounded-xl hover:bg-gray-800/80 transition-all duration-300 cursor-pointer" data-type="${rate.nombre}">
+                        <div class="rate-card flex items-center justify-between p-4 bg-gray-800/50 rounded-xl hover:bg-gray-800/80 transition-all duration-300 cursor-pointer" data-type="${rate.nombre}">
                             <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center">
+                                <div class="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0">
                                     ${iconSvg}
                                 </div>
                                 <div>
@@ -175,8 +175,8 @@
                                     <p class="text-xs text-gray-400">${currentView === 'compra' ? 'Venta' : 'Compra'}: ${formatCurrency(secondaryPrice)}</p>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <p class="font-bold text-lg text-white">${formatCurrency(price)}</p>
+                            <div class="text-right pl-2">
+                                <p class="font-bold text-base text-white">${formatCurrency(price)}</p>
                             </div>
                         </div>
                     `;
